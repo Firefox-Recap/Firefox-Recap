@@ -1,0 +1,12 @@
+{
+  "manifest_version": 2,
+  "name": "Firefox Recap",
+  "version": "0.1",
+  "description": "Displays browsing history for day, week, or month in a popup.",
+  "permissions": [
+    "history"
+  ],
+  "browser_action": {
+    "default_popup": "firefox-recap.html"
+  }
+}
