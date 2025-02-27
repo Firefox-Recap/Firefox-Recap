@@ -126,23 +126,107 @@ async function displayHistory(days) {
   }
 }
 
+//Kate Sawtell 
+async function getMostVisitedURLs(days, topN = 5) {
+  const startTime = daysAgoToTimestamp(days); 
+  try {
+      const historyItems = await browser.history.search({
+          text: '', 
+          startTime: startTime,
+          maxResults: 1000000 
+      });
+
+      const visitCounts = new Map();
+
+      // wait for all visit details to be fetched and counted
+      await Promise.all(historyItems.map(async item => {
+          const visits = await browser.history.getVisits({ url: item.url });
+          const urlObj = new URL(item.url);
+          const domain = urlObj.hostname.includes('www.') ? urlObj.hostname.split('www.')[1] : urlObj.hostname; // stripping 'www.'
+          visits.forEach(visit => {
+              visitCounts.set(domain, (visitCounts.get(domain) || 0) + 1);
+          });
+      }));
+
+      // sort URLs by visit count in descending order
+      let sortedVisits = Array.from(visitCounts).sort((a, b) => b[1] - a[1]);
+
+      // return the top 'N' most visited domains
+      return sortedVisits.slice(0, topN).map(item => ({ url: item[0], count: item[1] }));
+  } catch (error) {
+      console.error('Failed to fetch or process history data:', error);
+      return [];
+  }
+}
+
+
+
+function createTable(data) {
+  const table = document.createElement('table');
+  table.className = 'table-most-visited';
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+  const headerURL = document.createElement('th');
+  headerURL.textContent = 'URL';
+  const headerVisits = document.createElement('th');
+  headerVisits.textContent = 'Number of Visits';
+
+  headerRow.appendChild(headerURL);
+  headerRow.appendChild(headerVisits);
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  data.forEach(site => {
+      const row = document.createElement('tr');
+      const urlCell = document.createElement('td');
+      urlCell.textContent = site.url;
+      const visitCell = document.createElement('td');
+      visitCell.textContent = site.count.toString();
+      visitCell.style.textAlign = 'center';
+
+      row.appendChild(urlCell);
+      row.appendChild(visitCell);
+      tbody.appendChild(row);
+  });
+  table.appendChild(tbody);
+  return table;
+}
+
+async function displayMostVisited(days) {
+  const mostVisited = await getMostVisitedURLs(days);
+  const mostVisitedList = document.getElementById('mostVisitedList');
+  mostVisitedList.innerHTML = '';
+  const table = createTable(mostVisited);
+  mostVisitedList.appendChild(table);
+}
+
+
+
 //
 // Event Listeners for Buttons
 //
 
 document.getElementById('dayBtn').addEventListener('click', () => {
   displayHistory(1); // Past Day
+  displayMostVisited(1);
+
 });
 
 document.getElementById('weekBtn').addEventListener('click', () => {
   displayHistory(7); // Past Week
+  displayMostVisited(7);
+
 });
 
 document.getElementById('monthBtn').addEventListener('click', () => {
   displayHistory(30); // Past Month
+  displayMostVisited(30);
+
 });
 
 // Show day by default on load
 window.addEventListener('load', () => {
   displayHistory(1);
+  displayMostVisited(1);
 });
