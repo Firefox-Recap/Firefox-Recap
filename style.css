@@ -58,6 +58,28 @@ p {
   background-color: #f2f2f2;
 }
 
+.performance-stats-small {
+  background-color: #f0f0f0;
+  padding: 5px;
+  margin: 5px 0;
+  border-radius: 4px;
+  font-size: 0.8em;
+  color: #666;
+}
+
+.stat-highlight {
+  color: #0060df;
+  font-weight: bold;
+}
+
+.cache-hit {
+  color: green;
+}
+
+.cache-miss {
+  color: orange;
+}
+
 
 
 
