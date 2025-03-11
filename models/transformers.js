@@ -1,98 +1,99 @@
-// transformers.js
-import { pipeline, env } from '@xenova/transformers';
+import {pipeline, env} from '@xenova/transformers';
 
-// Enable caching in the browser’s IndexedDB:
 env.allowLocalModels = false;
+// Enable caching in the browser's IndexedDB:
 env.useBrowserCache = true;
 
-// A single reference to our pipeline classifier (shared by all calls)
 let classifier = null;
-
-// A promise that represents the async pipeline load in progress
 let pipelinePromise = null;
 
 /**
- * Load the Zero-Shot Classifier exactly once. If it's already loading or loaded,
+ * Load the Multi-label Classifier exactly once. If it's already loading or loaded,
  * we reuse the same pipelinePromise so we don't accidentally create multiple classifiers.
  */
 export async function loadModel() {
-    // Already loaded? Return immediately.
-    if (classifier) {
-        return classifier;
-    }
-    // Already in the process of loading? Return that same promise.
-    if (pipelinePromise) {
-        return pipelinePromise;
-    }
+  if (classifier) {
+    return classifier;
+  }
+  if (pipelinePromise) {
+    return pipelinePromise;
+  }
 
-    console.log("⏳ Loading Zero-Shot Classifier Model (Xenova)...");
+  console.log('Loading modernBERT Multi-label Classifier Model');
 
-    // Kick off the async pipeline load and store the promise
-    pipelinePromise = pipeline(
-        'zero-shot-classification',
-        'Xenova/nli-deberta-v3-small',
-        {
-            // Logs incremental download progress
-            progress_callback: (progressObj) => {
-                console.log(progressObj);
-            }
-        }
-    )
+  pipelinePromise = pipeline(
+    'text-classification',
+    'tshasan/modernbert-urltitle-classifier-preview',
+    {
+      // Logs incremental download progress
+      progress_callback: (progressObj) => {
+        console.log(progressObj);
+      },
+    },
+  )
     .then((loadedPipeline) => {
-        console.log("✅ Model Loaded Successfully!");
-        classifier = loadedPipeline; // store for all future calls
-        return classifier;
+      console.log('Model Loaded Successfully!');
+      classifier = loadedPipeline; // store for all future calls
+      return classifier;
     })
     .catch((err) => {
-        console.error("❌ Model Loading Failed:", err);
-        // If load fails, reset so we can retry on next call
-        pipelinePromise = null;
-        throw err;
+      console.error('Model Loading Failed:', err);
+      // If load fails, reset so we can retry on next call
+      pipelinePromise = null;
+      throw err;
     });
 
-    return pipelinePromise;
+  return pipelinePromise;
 }
 
 /**
- * Classify a page title with the zero-shot classifier
+ * Classify a page with the multi-label classifier
+ * @param {string} title - The page title
+ * @param {string} url - The page URL (optional)
+ * @returns {string[]} Array of categories the page belongs to
  */
-export async function classifyPage(title) {
-    // Make sure the model is loading / loaded
-    if (!classifier) {
-        await loadModel(); // Wait for pipelinePromise if needed
-    }
+export async function classifyPage(title, url = '') {
+  // Make sure the model is loading / loaded
+  if (!classifier) {
+    await loadModel(); // Wait for pipelinePromise if needed
+  }
 
-    // If it still didn't load (some fatal error?), bail out
-    if (!classifier) {
-        console.error("❌ Classifier is still undefined after attempting to load.");
-        return "Uncategorized";
-    }
+  if (!classifier) {
+    console.error('Classifier is still undefined after attempting to load.');
+    return ['N/A'];
+  }
 
-    // Define the labels you want for classification
-    const labels = [
-        'News',
-        'Technology & Development',
-        'Entertainment',
-        'Shopping',
-        'Social Media',
-        'Finance',
-        'Education'
-    ];
+  const allLabels = [
+    'News',
+    'Entertainment',
+    'Shop',
+    'Chat',
+    'Education',
+    'Government',
+    'Health',
+    'Technology',
+    'Work',
+    'Travel',
+  ];
 
-    try {
-        // Use the pipeline to classify
-        const result = await classifier(title, labels);
-        console.log(`🔍 Classification Result for "${title}":`, result.labels[0]);
-        return result.labels[0]; // top predicted category
-    } catch (error) {
-        console.error("❌ Classification Error:", error);
-        return 'Uncategorized';
-    }
+  try {
+    const input = `URL: ${url} Title: ${title}`;
+
+    // Use the pipeline to classify - returns all labels with their scores
+    const result = await classifier(input, {topk: allLabels.length});
+
+    // Filter results to only include labels with score > 0.5 (threshold can be adjusted)
+    const detectedCategories = result
+      .filter((item) => item.score > 0.5)
+      .map((item) => item.label);
+
+    console.log(`Classification Result for "${title}":`, detectedCategories);
+
+    return detectedCategories.length > 0
+      ? detectedCategories
+      : ['Uncategorized'];
+  } catch (error) {
+    console.log('no catergory detected');
+    return ['Uncategorized'];
+  }
 }
-
-
-
-
-
-
-

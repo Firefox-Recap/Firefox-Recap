@@ -7,7 +7,8 @@ let db;
  */
 const initDB = async () => {
   const SQL = await initSqlJs({
-    locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/${file}`
+    locateFile: (file) =>
+      `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/${file}`,
   });
 
   const storedDb = await browser.storage.local.get('sqliteDB');
@@ -23,7 +24,7 @@ const initDB = async () => {
         url TEXT,
         title TEXT,
         visitTime INTEGER,
-        category TEXT
+        category TEXT  
       );
     `);
     console.log('SQLite DB Initialized.');
@@ -38,17 +39,25 @@ export const saveHistory = async (historyItem) => {
     console.error('DB not initialized.');
     return;
   }
-  
+
+  const categoryValue = Array.isArray(historyItem.category)
+    ? JSON.stringify(historyItem.category)
+    : historyItem.category;
+
   const stmt = db.prepare(`
     INSERT INTO categorizedHistory (url, title, visitTime, category) 
     VALUES (?, ?, ?, ?);
   `);
-  stmt.run([historyItem.url, historyItem.title, historyItem.visitTime, historyItem.category]);
+  stmt.run([
+    historyItem.url,
+    historyItem.title,
+    historyItem.visitTime,
+    categoryValue,
+  ]);
   stmt.free();
 
-  // Persist to storage
   const data = db.export();
-  await browser.storage.local.set({ sqliteDB: data });
+  await browser.storage.local.set({sqliteDB: data});
   console.log('History item saved:', historyItem);
 };
 
@@ -60,15 +69,29 @@ export const getHistory = () => {
     console.error('DB not initialized.');
     return [];
   }
-  const stmt = db.prepare('SELECT * FROM categorizedHistory ORDER BY visitTime DESC LIMIT 100;');
+  const stmt = db.prepare(
+    'SELECT * FROM categorizedHistory ORDER BY visitTime DESC LIMIT 100;',
+  );
   const rows = [];
   while (stmt.step()) {
-    rows.push(stmt.getAsObject());
+    const row = stmt.getAsObject();
+
+    if (
+      row.category &&
+      typeof row.category === 'string' &&
+      row.category.startsWith('[')
+    ) {
+      try {
+        row.category = JSON.parse(row.category);
+      } catch (e) {
+        console.error('Error parsing category JSON:', e);
+      }
+    }
+
+    rows.push(row);
   }
   stmt.free();
   return rows;
 };
 
 export default initDB;
-
-

@@ -1,7 +1,7 @@
 body {
     font-family: Arial, sans-serif;
-    min-width: 300px;
-    max-width: 400px;
+    min-width: 600px;
+    max-width: 700px;
     background-color: #1e1e1e;
     color: #fff;
 }
@@ -33,4 +33,32 @@ ul#history-list li a {
 
 ul#history-list li a:hover {
     text-decoration: underline;
+}
+
+.dwm-nav {
+    display: flex;
+    border: 1px solid black;
+    border-radius: 15px;
+    overflow: hidden;
+    width: fit-content;
+    /* top: 20px;
+    left: 20px; */
+}
+.dwm-nav-item {
+    padding: 5px 10px;
+    cursor: pointer;
+    border: none;
+    background: rgb(134, 134, 134);
+    font-size: 12px;
+    font-weight: bold;
+    color: black;
+    transition: background 0.3s, color 0.3s;
+}
+
+.dwm-nav-item:not(:last-child) {
+    border-right: 1px solid black;
+}
+.dwm-nav-item.active {
+    background: #005eff;
+    color: rgba(255, 255, 255, 0.95);
 }
